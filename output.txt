@@ -1,54 +1,39 @@
 
 from aiogram import Router, types
-from aiogram.dispatcher import F
 import openai
 from config import OPENAI_KEY
+from aiogram import F
 from bot.services import rebuild_a_bot, generate_code, get_result
-
-import psycopg2
-from googletrans import Translator
 
 messages_router = Router()
 
-# Set up OpenAI API key
+# Set OpenAI API key
 openai.api_key = OPENAI_KEY
-
-# Set up PostgreSQL connection
-conn = psycopg2.connect(database="your_database", user="your_user", password="your_password", host="your_host", port="your_port")
-cursor = conn.cursor()
-
-# Set up Google Translate API
-translator = Translator()
 
 conversation = []
 
-
-@messages_router.message(F.text.lower.in_("stop"))
+@messages_router.message(F.text.lower() == "stop")
 async def stop_bot(message: types.Message):
     await message.answer("OK! Looking forward to the next task!")
 
+@messages_router.message(F.text.lower() == "help")
+async def help_command(message: types.Message):
+    await message.answer('''This bot can generate a code to improve itself.
+    Use the "Generate code iteration" option to generate some code to improve me.
+    Choose the "Stop" option to finish work.
+    Choose the "Rebuild bot with new code" option to add the code of improvements to me and restart.
+    Choose the "Send result code" option to get the current bot code.
+    Choose the "Show commands" option to display a list of all available commands.''')
 
-@messages_router.message(F.text.lower.in_("help"))
-async def help_bot(message: types.Message):
-    await message.answer(f'''This bot can generate a code to improve itself.
-Use "Generate code iteration" option to generate some code to improve me.
-Choose "Stop" option to finish work.
-Choose "Rebuild bot with new code" option to add code of improvements to me and restart.
-Choose "Send result code" option to get current bot code.
-Choose "View conversation history" option to view the conversation history with me.''')
-
-
-@messages_router.message(F.text.lower.in_("rebuild bot with new code"))
+@messages_router.message(F.text.lower() == "rebuild bot with new code")
 async def rebuild_bot(message: types.Message):
     await rebuild_a_bot(message, conversation)
 
-
-@messages_router.message(F.text.lower.in_("generate code iteration"))
+@messages_router.message(F.text.lower() == "generate code iteration")
 async def code_generation(message: types.Message):
     await generate_code(message, conversation)
 
-
-@messages_router.message(F.text.lower.in_("send result code"))
+@messages_router.message(F.text.lower() == "send result code")
 async def send_result_code(message: types.Message):
     result = await get_result(message)
     try:
@@ -56,47 +41,24 @@ async def send_result_code(message: types.Message):
     except Exception as e:
         await message.answer(str(e))
 
+@messages_router.message(F.text.lower() == "show commands")
+async def show_commands(message: types.Message):
+    commands = [
+        "help",
+        "rebuild bot with new code",
+        "generate code iteration",
+        "send result code",
+        "show commands",
+        "provide feedback"  # Added command
+    ]
+    await message.answer("Available commands:\n" + "\n".join(commands))
 
-@messages_router.message(F.text.lower.in_("view conversation history"))
-async def view_conversation_history(message: types.Message):
-    user_id = message.from_user.id
-    cursor.execute("SELECT message FROM conversation_history WHERE user_id = %s", (user_id,))
-    conversation_history = cursor.fetchall()
-    
-    if conversation_history:
-        conversation_history_text = "\n".join([row[0] for row in conversation_history])
-        await message.answer(f"Conversation history:\n{conversation_history_text}")
-    else:
-        await message.answer("No conversation history found.")
+@messages_router.message(F.text.lower() == "provide feedback")
+async def provide_feedback(message: types.Message):
+    # Implement your feedback handling logic here
+    await message.answer("Thank you for your feedback!")
 
-
-@messages_router.message()
+@messages_router.message(content_types=types.ContentTypes.ANY)
 async def handle_message(message: types.Message):
-    user_id = message.from_user.id
-    text = message.text
-
-    cursor.execute("INSERT INTO conversation_history (user_id, message) VALUES (%s, %s)", (user_id, text))
-    conn.commit()
-
-    # Language detection
-    detected_lang = translator.detect(text).lang
-
-    # Translation to English
-    translated_text = translator.translate(text).text
-
-    # OpenAI text processing
-    response = openai.Completion.create(
-        engine="davinci-codex",
-        prompt=translated_text,
-        max_tokens=50,
-        n=1,
-        stop=None,
-        temperature=0.7,
-    )
-
-    reply = response['choices'][0]['text']
-
-    # Translation back to detected language
-    reply = translator.translate(reply, dest=detected_lang).text
-
-    await message.answer(reply)
+    # Implement your natural language processing logic here using OpenAI's language models
+    await message.answer("I'm sorry, I don't understand.")
