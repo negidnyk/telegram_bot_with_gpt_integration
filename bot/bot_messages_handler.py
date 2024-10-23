@@ -13,6 +13,18 @@ openai.api_key = OPENAI_KEY
 conversation = []
 
 
+# @messages_router.message(F.text.lower())
+# async def validation(message: types.Message):
+#     commands = ["stop", "help", "rebuild bot with new code", "generate code iteration", "send result code"]
+#     flag = False
+#
+#     for i in commands:
+#         if message.text == i:
+#             flag = True
+#     if not flag:
+#         await message.answer("Unknown command. Try again!")
+
+
 @messages_router.message(F.text.lower() == "stop")
 async def stop_bot(message: types.Message):
     await message.answer("OK! Looking froward to the next task!")
